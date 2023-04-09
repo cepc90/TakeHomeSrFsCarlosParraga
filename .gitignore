@@ -1,3 +1,4 @@
 
 node_modules/
 .idea/
+task_database.sqlite
