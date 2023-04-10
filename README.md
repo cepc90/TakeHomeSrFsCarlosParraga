@@ -15,4 +15,4 @@ Please note that, cors is currently disabled since it was used for testing purpo
 
 #### Versions
 
-The node version that I used v18.15.0 and the npm version 9.6.4.
+I used node v18.15.0 and npm v9.6.4.
