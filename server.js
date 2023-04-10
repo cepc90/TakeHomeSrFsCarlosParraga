@@ -141,9 +141,9 @@ app.get('/api/pendingTasks', (req, res) => {
 app.post('/api/task', (req, res) => {
   const description = req.body.description;
   saveTaskToDb(description, function (id) {
-    const task = new Task(id, description, null, false);
-    pendingTasks.push(task);
-    res.status(201).send(`Task "${description}" created successfully`);
+    loadTasksFromTheDatabase(function () {
+      res.status(201).send(`Task "${description}" created successfully`);
+    });
   });
 });
 
