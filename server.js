@@ -126,6 +126,19 @@ function saveCompletedTaskToDb(description, completedDate, callback) {
   });
 }
 
+function deleteAllTasks(callback) {
+  db.run('DELETE FROM tasks', function(err) {
+    if (err) {
+      console.log('Error deleting all tasks task: ', err);
+    } else {
+      if (callback != null) {
+        callback(db.lastID);
+      }
+    }
+  });
+}
+
+
 const app = express();
 app.use(express.json());
 app.use(cors()); // Was added for
@@ -136,6 +149,14 @@ app.get('/api/completedTasks', (req, res) => {
 
 app.get('/api/pendingTasks', (req, res) => {
   res.json(pendingTasks);
+});
+
+app.get('/api/deleteAllTasks', (req, res) => {
+  deleteAllTasks(function () {
+    loadTasksFromTheDatabase(function () {
+      res.status(204).send();
+    });
+  });
 });
 
 app.post('/api/task', (req, res) => {
