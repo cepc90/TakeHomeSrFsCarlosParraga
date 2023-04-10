@@ -39,6 +39,9 @@ if (!existsSync(DB_PATH)) { // It will create it if it doesn't exist, so I have 
 }
 
 function loadTasksFromTheDatabase(callback) {
+  pendingTasks.length = 0;
+  completedTasks.length = 0;
+
   db.all('SELECT * FROM tasks ORDER BY completedDate DESC', [], (err, rows) => {
     if (err) {
       throw err;
@@ -68,8 +71,9 @@ function loadTasksFromTheDatabase(callback) {
 }
 
 function markTaskAsCompleted(id, callback) {
+  console.log("Marking " + id + " as completed");
   const now = new Date().toISOString();
-  db.run('UPDATE tasks SET completedDate = ? AND completed = 1 WHERE id = ?', [now, id], function(err) {
+  db.run('UPDATE tasks SET completedDate = ?, completed = 1 WHERE id = ?', [now, id], function(err) {
     if (err) {
       console.log('Error updating task: ', err);
     } else {
@@ -81,9 +85,10 @@ function markTaskAsCompleted(id, callback) {
 }
 
 function markTaskAsPending(id, callback) {
-  db.run('UPDATE tasks SET completedDate = NULL AND completed = 0 WHERE id = ?', [id], function(err) {
+  console.log("Marking " + id + " as pending");
+  db.run('UPDATE tasks SET completedDate = NULL, completed = 0 WHERE id = ?', [id], function(err) {
     if (err) {
-      console.log('Error inserting task: ', err);
+      console.log('Error updating task: ', err);
     } else {
       if (callback != null) {
         callback();
