@@ -38,8 +38,8 @@ if (!existsSync(DB_PATH)) { // It will create it if it doesn't exist, so I have 
   loadTasksFromTheDatabase();
 }
 
-function loadTasksFromTheDatabase() {
-  db.all('SELECT * FROM tasks', [], (err, rows) => {
+function loadTasksFromTheDatabase(callback) {
+  db.all('SELECT * FROM tasks ORDER BY completedDate DESC', [], (err, rows) => {
     if (err) {
       throw err;
     }
@@ -53,9 +53,40 @@ function loadTasksFromTheDatabase() {
 
     for (const task of tasks) {
       if (task.completed) {
-        completedTasks.push(task);
+        if (completedTasks.length < 10) {
+          completedTasks.push(task);
+        }
       } else {
         pendingTasks.push(task);
+      }
+    }
+
+    if (callback != null) {
+      callback();
+    }
+  });
+}
+
+function markTaskAsCompleted(id, callback) {
+  const now = new Date().toISOString();
+  db.run('UPDATE tasks SET completedDate = ? AND completed = 1 WHERE id = ?', [now, id], function(err) {
+    if (err) {
+      console.log('Error updating task: ', err);
+    } else {
+      if (callback != null) {
+        callback();
+      }
+    }
+  });
+}
+
+function markTaskAsPending(id, callback) {
+  db.run('UPDATE tasks SET completedDate = NULL AND completed = 0 WHERE id = ?', [id], function(err) {
+    if (err) {
+      console.log('Error inserting task: ', err);
+    } else {
+      if (callback != null) {
+        callback();
       }
     }
   });
@@ -66,7 +97,9 @@ function saveTaskToDb(description, callback) {
     if (err) {
       console.log('Error inserting task: ', err);
     } else {
-      callback(db.lastID);
+      if (callback != null) {
+        callback(db.lastID);
+      }
     }
   });
 }
@@ -76,7 +109,9 @@ function saveCompletedTaskToDb(description, completedDate, callback) {
     if (err) {
       console.log('Error inserting task: ', err);
     } else {
-      callback(db.lastID);
+      if (callback != null) {
+        callback(db.lastID);
+      }
     }
   });
 }
@@ -99,6 +134,24 @@ app.post('/api/task', (req, res) => {
     const task = new Task(id, description, null, false);
     pendingTasks.push(task);
     res.status(201).send(`Task "${description}" created successfully`);
+  });
+});
+
+app.put('/api/task/markAsCompleted', (req, res) => {
+  const id = req.body.id;
+  markTaskAsCompleted(id, function () {
+    loadTasksFromTheDatabase(function () {
+      res.status(204).send();
+    });
+  });
+});
+
+app.put('/api/task/markAsPending', (req, res) => {
+  const id = req.body.id;
+  markTaskAsPending(id, function () {
+    loadTasksFromTheDatabase(function (){
+      res.status(204).send();
+    });
   });
 });
 
