@@ -4,8 +4,8 @@ const Task = require("./Task");
 const {existsSync} = require("fs");
 const sqlite3 = require('sqlite3');
 
-const pendingTasks = [];
-const completedTasks = [];
+let pendingTasks = [];
+let completedTasks = [];
 
 const DB_PATH = './task_database.sqlite';
 let db;
@@ -39,35 +39,40 @@ if (!existsSync(DB_PATH)) { // It will create it if it doesn't exist, so I have 
 }
 
 function loadTasksFromTheDatabase(callback) {
-  pendingTasks.length = 0;
-  completedTasks.length = 0;
-
-  db.all('SELECT * FROM tasks ORDER BY completedDate DESC', [], (err, rows) => {
+  db.all('SELECT * FROM tasks WHERE completed = 0 ORDER BY description ASC', [], (err, rows) => {
     if (err) {
       throw err;
     }
-
-    const tasks = rows.map(row => ({
-      id: row.id,
-      description: row.description,
-      completedDate: row.completedDate,
-      completed: Boolean(row.completed),
-    }));
-
-    for (const task of tasks) {
-      if (task.completed) {
-        if (completedTasks.length < 10) {
-          completedTasks.push(task);
-        }
-      } else {
-        pendingTasks.push(task);
+    pendingTasks = queryResultToTaskList(rows);
+    db.all('SELECT * FROM tasks WHERE completed = 1 ORDER BY completedDate DESC LIMIT 10', [], (err, rows) => {
+      if (err) {
+        throw err;
       }
-    }
-
-    if (callback != null) {
-      callback();
-    }
+      completedTasks = queryResultToTaskList(rows);
+      // Completed tasks need to be sorted AFTER they are returned, since I must only display the 10 that were completed more recently
+      completedTasks = completedTasks.sort((a, b) => {
+        if (a.description < b.description) {
+          return -1;
+        }
+        if (a.description > b.description) {
+          return 1;
+        }
+        return 0;
+      });
+      if (callback != null) {
+        callback();
+      }
+    });
   });
+}
+
+function queryResultToTaskList(rows) {
+  return rows.map(row => ({
+    id: row.id,
+    description: row.description,
+    completedDate: row.completedDate,
+    completed: Boolean(row.completed),
+  }));
 }
 
 function markTaskAsCompleted(id, callback) {
